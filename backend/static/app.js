@@ -6,12 +6,12 @@
 const API = ''; // same origin — Flask serves both
 
 const RIASEC_COLORS = {
-  Realistic:     '#e08c3e',
+  Realistic: '#e08c3e',
   Investigative: '#3e9ce0',
-  Artistic:      '#b43ee0',
-  Social:        '#3ecfb2',
-  Enterprising:  '#e05c6a',
-  Conventional:  '#8ea4c8',
+  Artistic: '#b43ee0',
+  Social: '#3ecfb2',
+  Enterprising: '#e05c6a',
+  Conventional: '#8ea4c8',
 };
 
 // ─── STATE ───────────────────────────────────────────
@@ -87,7 +87,7 @@ function buildHeader() {
 const STEPS = ['Welcome', 'RIASEC', 'Top 5', 'Interests', 'Top 10', 'Skill Gap', 'Results'];
 
 function buildStepRail() {
-  const visible = [0,1,2,3,4,5,6];
+  const visible = [0, 1, 2, 3, 4, 5, 6];
   let html = '<div class="step-rail">';
   visible.forEach((s, idx) => {
     const cls = state.step > s ? 'done' : state.step === s ? 'active' : '';
@@ -160,7 +160,7 @@ function buildWelcome() {
 
 // ─── RIASEC QUESTIONNAIRE ─────────────────────────────
 let currentCatIdx = 0;
-const CAT_ORDER = ['Realistic','Investigative','Artistic','Social','Enterprising','Conventional'];
+const CAT_ORDER = ['Realistic', 'Investigative', 'Artistic', 'Social', 'Enterprising', 'Conventional'];
 
 function buildRIASEC() {
   if (!state.questions.length) return '<div class="loading-state"><div class="spinner"></div></div>';
@@ -168,7 +168,7 @@ function buildRIASEC() {
   const cat = CAT_ORDER[currentCatIdx];
   const catQs = state.questions.filter(q => q.category === cat);
   const catAnswers = state.answers[cat] || [];
-  const totalAnswered = Object.values(state.answers).reduce((a,b) => a + b.length, 0);
+  const totalAnswered = Object.values(state.answers).reduce((a, b) => a + b.length, 0);
   const totalQ = 30;
   const pct = Math.round(totalAnswered / totalQ * 100);
 
@@ -190,7 +190,7 @@ function buildRIASEC() {
       <div class="question-row">
         <div class="q-text">${qi + 1}. ${q.text}</div>
         <div class="likert" id="lk-${qi}">
-          ${[1,2,3,4,5].map(n => `
+          ${[1, 2, 3, 4, 5].map(n => `
             <label>
               <input type="radio" name="q${qi}" value="${n}" ${val === n ? 'checked' : ''} data-qi="${qi}" data-cat="${cat}" />
               <div class="dot"></div>
@@ -214,8 +214,8 @@ function buildRIASEC() {
     ${state.error ? `<div class="error-banner">${state.error}</div>` : ''}
     <div class="btn-row">
       ${currentCatIdx > 0 ? `<button class="btn btn-secondary" id="btn-prev-cat">← Back</button>` : ''}
-      ${!isLast ? `<button class="btn btn-primary" id="btn-next-cat" ${!catDone?'disabled':''}>Next Category →</button>` : ''}
-      ${isLast ? `<button class="btn btn-primary" id="btn-submit-riasec" ${!catDone?'disabled':''}>Analyze My Profile →</button>` : ''}
+      ${!isLast ? `<button class="btn btn-primary" id="btn-next-cat" ${!catDone ? 'disabled' : ''}>Next Category →</button>` : ''}
+      ${isLast ? `<button class="btn btn-primary" id="btn-submit-riasec" ${!catDone ? 'disabled' : ''}>Analyze My Profile →</button>` : ''}
     </div>
   `;
 
@@ -250,7 +250,7 @@ function buildObj1Results() {
     <div class="career-grid">
       ${careers.map((c, i) => `
         <div class="career-card" style="cursor:default">
-          <div class="career-rank">#${i+1}</div>
+          <div class="career-rank">#${i + 1}</div>
           <div class="career-title">${c.title}</div>
           <div class="career-desc">${c.description || 'No description available.'}</div>
           <div class="career-meta">
@@ -316,7 +316,7 @@ function buildTop10() {
             <div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid var(--border);font-size:0.82rem">
               <span style="color:var(--label)">${c.title}</span>
               <span style="font-family:var(--ff-mono);font-size:0.7rem;color:var(--muted)">
-                RIASEC ${(c.riasec_score*100).toFixed(1)}% | Interest ${(c.interest_score*100).toFixed(1)}%
+                RIASEC ${(c.riasec_score * 100).toFixed(1)}% | Interest ${(c.interest_score * 100).toFixed(1)}%
               </span>
             </div>
           `).join('')}
@@ -330,12 +330,12 @@ function buildTop10() {
       ${top10.map((c, i) => `
         <div class="career-card ${state.selectedCareer === c.title ? 'selected' : ''}"
              data-title="${escHtml(c.title)}" id="career-${i}">
-          <div class="career-rank">#${i+1}</div>
+          <div class="career-rank">#${i + 1}</div>
           <div class="career-title">${c.title}</div>
           <div class="career-desc">${c.description || 'No description available.'}</div>
           <div class="career-meta">
-            <span class="score-pill gold">Final ${(c.final_score*100).toFixed(1)}%</span>
-            <span class="score-pill teal">Interest ${(c.interest_score*100).toFixed(1)}%</span>
+            <span class="score-pill gold">Final ${(c.final_score * 100).toFixed(1)}%</span>
+            <span class="score-pill teal">Interest ${(c.interest_score * 100).toFixed(1)}%</span>
             <span class="score-pill muted">${c.onet_code}</span>
           </div>
         </div>
@@ -432,7 +432,7 @@ function buildGapResults() {
         />
         <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle"
               font-family="Playfair Display" font-size="18" fill="var(--text)">${covPct}%</text>
-        <text x="${cx}" y="${cy+22}" text-anchor="middle"
+        <text x="${cx}" y="${cy + 22}" text-anchor="middle"
               font-family="DM Sans" font-size="9" fill="var(--muted)" letter-spacing="1">COVERAGE</text>
       </svg>
     </div>
@@ -468,17 +468,17 @@ function buildGapResults() {
 // ─── HELPERS ─────────────────────────────────────────
 function escHtml(s) {
   return String(s)
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;');
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 function setLoading(v) { state.loading = v; render(); }
 
 async function apiCall(path, body) {
   const opts = body
-    ? { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) }
+    ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
     : { method: 'GET' };
   const res = await fetch(API + path, opts);
   const data = await res.json();
@@ -496,7 +496,7 @@ function attachEvents() {
       try {
         const d = await apiCall('/api/questions');
         state.questions = d.questions;
-      } catch(e) {
+      } catch (e) {
         state.error = e.message;
         setLoading(false);
         return;
@@ -518,7 +518,7 @@ function attachEvents() {
       const result = await apiCall('/api/objective1', { answers: state.answers });
       state.obj1Result = result;
       state.step = 2;
-    } catch(e) {
+    } catch (e) {
       state.error = e.message;
     }
     setLoading(false);
@@ -542,7 +542,7 @@ function attachEvents() {
       if (btn) btn.disabled = !catDone;
 
       // update progress bar
-      const totalAnswered = Object.values(state.answers).reduce((a,b) => a + b.length, 0);
+      const totalAnswered = Object.values(state.answers).reduce((a, b) => a + b.length, 0);
       const fill = document.querySelector('.q-progress-fill');
       if (fill) fill.style.width = Math.round(totalAnswered / 30 * 100) + '%';
     });
@@ -550,7 +550,7 @@ function attachEvents() {
 
   // Obj1 → Interests
   on('btn-goto-interests', () => { state.step = 3; render(); });
-  on('btn-back-to-obj1',   () => { state.step = 2; render(); });
+  on('btn-back-to-obj1', () => { state.step = 2; render(); });
 
   // Submit interests
   on('btn-submit-interests', async () => {
@@ -563,7 +563,7 @@ function attachEvents() {
       const result = await apiCall('/api/objective2', { user_text: txt });
       state.obj2Result = result;
       state.step = 4;
-    } catch(e) {
+    } catch (e) {
       state.error = e.message;
     }
     setLoading(false);
@@ -587,7 +587,7 @@ function attachEvents() {
   });
 
   // Skill gap
-  on('btn-back-to-top10',              () => { state.step = 4; render(); });
+  on('btn-back-to-top10', () => { state.step = 4; render(); });
   on('btn-back-to-top10-from-results', () => { state.step = 4; render(); });
 
   on('btn-submit-skills', async () => {
@@ -602,7 +602,7 @@ function attachEvents() {
       });
       state.gapResult = result;
       state.step = 6;
-    } catch(e) {
+    } catch (e) {
       state.error = e.message;
     }
     setLoading(false);
