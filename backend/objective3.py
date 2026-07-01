@@ -31,12 +31,12 @@ def find_best_job_match(selected_title, skills_df, occ_df):
     # 1. Exact match
     exact = skills_df[skills_df['norm_title'] == norm_sel]
     if not exact.empty:
-        return exact.iloc[0]['Job_title']
+        return exact.iloc[0]['Job_title'], 100.0
 
     # 2. Contains match
     contains = skills_df[skills_df['norm_title'].str.contains(norm_sel, na=False)]
     if not contains.empty:
-        return contains.iloc[0]['Job_title']
+        return contains.iloc[0]['Job_title'], 100.0
 
     # 3. Hybrid semantic search
     vectorizer = TfidfVectorizer(
@@ -57,26 +57,34 @@ def find_best_job_match(selected_title, skills_df, occ_df):
         seq_score = difflib.SequenceMatcher(None, norm_sel, cand_norm).ratio()
         bonus = 0.0
         important_terms = {'teacher', 'professor', 'manager', 'science', 'biological',
-                           'mathematical', 'environmental', 'research', 'faculty'}
+                        'mathematical', 'environmental', 'research', 'faculty'}
         for term in important_terms:
             if term in norm_sel and term in cand_norm:
                 bonus += 0.18
-        return 0.5 * cos_score + 0.35 * seq_score + 0.15 * bonus
+        selection_score = 0.5 * cos_score + 0.35 * seq_score + 0.15 * bonus
+        return selection_score, cos_score, seq_score
 
     top_n = 200
     top_indices = cosine_scores.argsort()[-top_n:][::-1]
 
     best_score = -1
     best_title = None
+    best_cos = 0.0
+    best_seq = 0.0
 
     for idx in top_indices:
-        score = hybrid_score(idx)
+        score, cos_score, seq_score = hybrid_score(idx)
         title = skills_df.iloc[idx]['Job_title']
         if score > best_score:
             best_score = score
             best_title = title
+            best_cos = cos_score
+            best_seq = seq_score
 
-    return best_title
+    confidence_score = 0.6 * best_cos + 0.4 * best_seq
+    confidence_pct = round(min(confidence_score * 100, 100.0), 1)
+
+    return best_title, confidence_pct
 
 
 def run_objective3(hybrid_csv, skills_csv, occ_csv, selected_title: str, user_skills_raw: str):
@@ -90,7 +98,7 @@ def run_objective3(hybrid_csv, skills_csv, occ_csv, selected_title: str, user_sk
     skills_df = pd.read_csv(skills_csv, encoding="cp1252", engine="python")
     occ_df = pd.read_csv(occ_csv) if Path(occ_csv).exists() else pd.DataFrame()
 
-    matched = find_best_job_match(selected_title, skills_df, occ_df)
+    matched, skill_match_confidence = find_best_job_match(selected_title, skills_df, occ_df)
 
     if matched is None:
         return {"error": "Could not match career to skills database"}
@@ -122,7 +130,8 @@ def run_objective3(hybrid_csv, skills_csv, occ_csv, selected_title: str, user_sk
         'Total_Required': len(req_skills),
         'User_Skills_Count': len(user_skills),
         'Have_Skills': " | ".join(have),
-        'Gap_Skills': " | ".join(gap)
+        'Gap_Skills': " | ".join(gap),
+        'Skill_Match_Confidence': skill_match_confidence
     }]).to_csv("skill_gap_analysis.csv", index=False)
 
     return {
@@ -133,4 +142,5 @@ def run_objective3(hybrid_csv, skills_csv, occ_csv, selected_title: str, user_sk
         "have": have,
         "gap": gap,
         "coverage_pct": round(len(have) / len(req_skills) * 100, 1) if req_skills else 0,
+        "skill_match_confidence": skill_match_confidence,
     }
