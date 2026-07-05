@@ -389,7 +389,7 @@ function buildGapResults() {
 
   return `
     <div class="section-eyebrow">Skill Gap Analysis — Results</div>
-    <div class="section-title" style="margin-bottom:0.5rem">Your Development Roadmap</div>
+    <div class="section-title" style="margin-bottom:0.5rem">Skills Required</div>
 
     <div class="matched-job-note">
       🔍 Your selected career "<strong>${r.selected_career}</strong>" was matched to
