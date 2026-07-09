@@ -1,17 +1,45 @@
 /* ════════════════════════════════════════════════════════
    CareerCompass — vanilla JS SPA
    No bundler required. Runs from Flask static folder.
+
+   Redesign note: the visual language is a navigation
+   instrument — a compass dial reads off your progress as a
+   bearing, and each step is a heading on the way to your
+   result. All markup below is written to match styles.css.
+
+   API contract assumed (adjust paths to match your Flask
+   routes if they differ):
+     GET  /api/questions                 -> { questions }
+     POST /api/objective1  { answers }   -> { careers, profile }
+     POST /api/objective2  { interest_text, profile }
+                                          -> { top10, obj1_display }
+     POST /api/skill-gap   { career, skills }
+                                          -> { selected_career, matched_job,
+                                               total_required, have, gap,
+                                               coverage_pct, skill_match_confidence }
 ════════════════════════════════════════════════════════ */
 
 const API = ''; // same origin — Flask serves both
 
 const RIASEC_COLORS = {
-  Realistic: '#e08c3e',
-  Investigative: '#3e9ce0',
-  Artistic: '#b43ee0',
-  Social: '#3ecfb2',
-  Enterprising: '#e05c6a',
-  Conventional: '#8ea4c8',
+  Realistic: '#b8622f',
+  Investigative: '#2f6fa8',
+  Artistic: '#8b4b9e',
+  Social: '#2f8f72',
+  Enterprising: '#c1443b',
+  Conventional: '#6b6f5e',
+};
+
+const CAT_ORDER = ['Realistic', 'Investigative', 'Artistic', 'Social', 'Enterprising', 'Conventional'];
+const STEPS = ['Welcome', 'RIASEC', 'Top 5', 'Interests', 'Top 10', 'Skill Gap', 'Results'];
+// each step reads as a compass bearing, evenly spaced around the dial
+const STEP_BEARINGS = STEPS.map((_, i) => Math.round((i / STEPS.length) * 360));
+
+const LOADING_MESSAGES = {
+  questions: 'Loading the survey instrument…',
+  objective1: 'Calibrating your RIASEC profile…',
+  objective2: 'Cross-referencing interests against O*NET…',
+  skillgap: 'Plotting your skill coverage…',
 };
 
 // ─── STATE ───────────────────────────────────────────
@@ -26,18 +54,37 @@ const state = {
   userSkills: '',
   gapResult: null,
   loading: false,
+  loadingKey: 'questions',
   error: null,
 };
+
+let currentCatIdx = 0;
+let lastBearing = STEP_BEARINGS[0];
 
 // ─── RENDER ENGINE ───────────────────────────────────
 function render() {
   document.getElementById('app').innerHTML = buildApp();
   attachEvents();
+  animateCompassNeedle();
   if (state.step === 6 && !state.loading) animateGapResults();
 }
 
+function animateCompassNeedle() {
+  const needle = document.getElementById('compass-needle');
+  if (!needle) return;
+  const target = STEP_BEARINGS[Math.min(state.step, STEP_BEARINGS.length - 1)];
+  needle.style.transition = 'none';
+  needle.setAttribute('transform', `rotate(${lastBearing} 60 60)`);
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      needle.style.transition = 'transform 1.1s cubic-bezier(0.22,1,0.36,1)';
+      needle.setAttribute('transform', `rotate(${target} 60 60)`);
+      lastBearing = target;
+    });
+  });
+}
+
 function animateGapResults() {
-  // animate the coverage ring from 0 to its target dasharray
   const ring = document.querySelector('.coverage-ring circle[data-fill]');
   if (ring) {
     const dash = ring.dataset.dash, circ = ring.dataset.circ;
@@ -47,7 +94,6 @@ function animateGapResults() {
       });
     });
   }
-  // count up each stat value
   document.querySelectorAll('.gap-stat-val[data-countup]').forEach(el => {
     const target = parseFloat(el.dataset.countup);
     const suffix = el.dataset.suffix || '';
@@ -68,9 +114,13 @@ function animateGapResults() {
 function buildApp() {
   return `
     ${buildHeader()}
-    ${buildStepRail()}
-    <div class="screen" key="${state.step}">
-      ${buildScreen()}
+    <div class="app-shell">
+      ${buildStepRail()}
+      <main class="screen-wrap">
+        <div class="screen">
+          ${buildScreen()}
+        </div>
+      </main>
     </div>
   `;
 }
@@ -84,22 +134,57 @@ function buildHeader() {
   `;
 }
 
-const STEPS = ['Welcome', 'RIASEC', 'Top 5', 'Interests', 'Top 10', 'Skill Gap', 'Results'];
+// ─── COMPASS DIAL (signature element) ───────────────
+function buildCompassDial() {
+  const ticks = [];
+  for (let deg = 0; deg < 360; deg += 30) {
+    const major = deg % 90 === 0;
+    const r1 = major ? 42 : 46;
+    const r2 = 50;
+    const rad = (deg - 90) * (Math.PI / 180);
+    const x1 = 60 + r1 * Math.cos(rad), y1 = 60 + r1 * Math.sin(rad);
+    const x2 = 60 + r2 * Math.cos(rad), y2 = 60 + r2 * Math.sin(rad);
+    ticks.push(`<line class="compass-tick ${major ? 'major' : ''}" x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" />`);
+  }
+  const cardinals = [
+    { l: 'N', deg: 0 }, { l: 'E', deg: 90 }, { l: 'S', deg: 180 }, { l: 'W', deg: 270 },
+  ];
+  const labels = cardinals.map(({ l, deg }) => {
+    const rad = (deg - 90) * (Math.PI / 180);
+    const x = 60 + 33 * Math.cos(rad), y = 60 + 33 * Math.sin(rad);
+    return `<text class="compass-label" x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle">${l}</text>`;
+  }).join('');
+
+  return `
+    <div class="compass-dial-wrap">
+      <svg class="compass-dial" width="120" height="120" viewBox="0 0 120 120">
+        <circle class="compass-rim" cx="60" cy="60" r="54" />
+        ${ticks.join('')}
+        ${labels}
+        <g id="compass-needle">
+          <path class="compass-needle-tip" d="M60,16 L66,60 L54,60 Z" />
+          <path class="compass-needle-tail" d="M60,104 L66,60 L54,60 Z" />
+        </g>
+        <circle class="compass-hub" cx="60" cy="60" r="4.5" />
+      </svg>
+    </div>
+  `;
+}
 
 function buildStepRail() {
-  const visible = [0, 1, 2, 3, 4, 5, 6];
-  let html = '<div class="step-rail">';
-  visible.forEach((s, idx) => {
+  let html = `<nav class="step-rail" aria-label="Assessment progress">${buildCompassDial()}<ol class="step-list">`;
+  STEPS.forEach((label, s) => {
     const cls = state.step > s ? 'done' : state.step === s ? 'active' : '';
-    html += `<div class="step-node ${cls}">
-      <div class="step-circle">${state.step > s ? '✓' : (s + 1)}</div>
-      <div class="step-label">${STEPS[s]}</div>
-    </div>`;
-    if (idx < visible.length - 1) {
-      html += `<div class="step-connector ${state.step > s ? 'done' : ''}"></div>`;
-    }
+    const bearing = String(STEP_BEARINGS[s]).padStart(3, '0') + '°';
+    html += `
+      <li class="step-node ${cls}">
+        <span class="step-bearing">${bearing}</span>
+        <span class="step-mark"></span>
+        <span class="step-label">${label}</span>
+      </li>
+    `;
   });
-  html += '</div>';
+  html += '</ol></nav>';
   return html;
 }
 
@@ -117,10 +202,11 @@ function buildScreen() {
 
 // ─── LOADING ─────────────────────────────────────────
 function buildLoading() {
+  const msg = LOADING_MESSAGES[state.loadingKey] || 'Working…';
   return `
     <div class="loading-state">
       <div class="spinner"></div>
-      <div class="loading-text">Running analysis… this may take a moment</div>
+      <div class="loading-text">${msg}</div>
     </div>
   `;
 }
@@ -136,17 +222,17 @@ function buildWelcome() {
     </div>
     <div class="welcome-grid">
       <div class="welcome-card">
-        <div class="welcome-card-num">01</div>
+        <div class="welcome-card-num">Bearing 01</div>
         <div class="welcome-card-title">RIASEC Profile</div>
         <div class="welcome-card-desc">30 questions across 6 personality dimensions map you to O*NET occupations via cosine similarity.</div>
       </div>
       <div class="welcome-card">
-        <div class="welcome-card-num">02</div>
+        <div class="welcome-card-num">Bearing 02</div>
         <div class="welcome-card-title">Interest Matching</div>
         <div class="welcome-card-desc">TF-IDF NLP analysis of your interests fused with RIASEC scores produces a hybrid top-10 ranking.</div>
       </div>
       <div class="welcome-card">
-        <div class="welcome-card-num">03</div>
+        <div class="welcome-card-num">Bearing 03</div>
         <div class="welcome-card-title">Skill Gap Analysis</div>
         <div class="welcome-card-desc">Compare your current skills against the role requirements and get a clear development roadmap.</div>
       </div>
@@ -159,9 +245,6 @@ function buildWelcome() {
 }
 
 // ─── RIASEC QUESTIONNAIRE ─────────────────────────────
-let currentCatIdx = 0;
-const CAT_ORDER = ['Realistic', 'Investigative', 'Artistic', 'Social', 'Enterprising', 'Conventional'];
-
 function buildRIASEC() {
   if (!state.questions.length) return '<div class="loading-state"><div class="spinner"></div></div>';
 
@@ -225,7 +308,6 @@ function buildRIASEC() {
 // ─── OBJECTIVE 1 RESULTS ─────────────────────────────
 function buildObj1Results() {
   const { careers, profile } = state.obj1Result;
-  const maxProfile = Math.max(...Object.values(profile));
 
   return `
     <div class="section-eyebrow">Step 1 Complete — RIASEC Results</div>
@@ -237,7 +319,7 @@ function buildObj1Results() {
         <div class="profile-bar-row">
           <div class="pb-label" style="color:${RIASEC_COLORS[c]}">${c}</div>
           <div class="pb-track">
-            <div class="pb-fill" style="width:${Math.round(profile[c] / 7 * 100)}%; background: linear-gradient(90deg, ${RIASEC_COLORS[c]}80, ${RIASEC_COLORS[c]})"></div>
+            <div class="pb-fill" style="--target:${Math.round(profile[c] / 7 * 100)}%; background: linear-gradient(90deg, ${RIASEC_COLORS[c]}80, ${RIASEC_COLORS[c]})"></div>
           </div>
           <div class="pb-val">${profile[c].toFixed(2)}</div>
         </div>
@@ -250,7 +332,7 @@ function buildObj1Results() {
     <div class="career-grid">
       ${careers.map((c, i) => `
         <div class="career-card" style="cursor:default">
-          <div class="career-rank">#${i + 1}</div>
+          <div class="career-rank">Match #${i + 1}</div>
           <div class="career-title">${c.title}</div>
           <div class="career-desc">${c.description || 'No description available.'}</div>
           <div class="career-meta">
@@ -278,7 +360,7 @@ function buildInterests() {
     </div>
 
     <div class="interest-box">
-      <textarea id="interest-text" placeholder="e.g. I love working with data and finding patterns. I enjoy helping people learn new things. I'm fascinated by biology and enjoy writing...">${state.interestText}</textarea>
+      <textarea id="interest-text" placeholder="e.g. I love working with data and finding patterns. I enjoy helping people learn new things. I'm fascinated by biology and enjoy writing...">${escHtml(state.interestText)}</textarea>
     </div>
 
     <div style="font-size:0.75rem;color:var(--muted);margin-bottom:1.5rem">
@@ -308,13 +390,13 @@ function buildTop10() {
 
     ${obj1_display && obj1_display.length ? `
       <details style="margin-bottom:1.5rem;cursor:pointer">
-        <summary style="font-size:0.8rem;color:var(--muted);list-style:none;display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0;border-top:1px solid var(--border)">
-          <span style="color:var(--gold)">▸</span> View RIASEC top matches for reference
+        <summary style="font-size:0.8rem;color:var(--muted);list-style:none;display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0;border-top:1px solid var(--line)">
+          <span style="color:var(--brass)">▸</span> View RIASEC top matches for reference
         </summary>
-        <div style="margin-top:1rem;padding:1rem;background:var(--card);border-radius:8px;border:1px solid var(--border)">
+        <div style="margin-top:1rem;padding:1rem;background:var(--panel-raised);border-radius:8px;border:1px solid var(--line)">
           ${obj1_display.map(c => `
-            <div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid var(--border);font-size:0.82rem">
-              <span style="color:var(--label)">${c.title}</span>
+            <div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid var(--line);font-size:0.82rem">
+              <span style="color:var(--ink)">${c.title}</span>
               <span style="font-family:var(--ff-mono);font-size:0.7rem;color:var(--muted)">
                 RIASEC ${(c.riasec_score * 100).toFixed(1)}% | Interest ${(c.interest_score * 100).toFixed(1)}%
               </span>
@@ -329,8 +411,8 @@ function buildTop10() {
     <div class="career-grid">
       ${top10.map((c, i) => `
         <div class="career-card ${state.selectedCareer === c.title ? 'selected' : ''}"
-             data-title="${escHtml(c.title)}" id="career-${i}">
-          <div class="career-rank">#${i + 1}</div>
+             data-title="${escHtml(c.title)}" id="career-${i}" tabindex="0" role="button">
+          <div class="career-rank">Rank #${i + 1}</div>
           <div class="career-title">${c.title}</div>
           <div class="career-desc">${c.description || 'No description available.'}</div>
           <div class="career-meta">
@@ -357,7 +439,7 @@ function buildSkillGap() {
     <div class="section-eyebrow">Step 3 of 3 — Skill Gap Analysis</div>
     <div class="section-title">What skills do you already have?</div>
     <div class="section-subtitle">
-      You selected: <strong style="color:var(--gold)">${state.selectedCareer}</strong><br/>
+      You selected: <strong style="color:var(--brass-dark)">${state.selectedCareer}</strong><br/>
       Enter your current skills so we can identify what you need to develop.
     </div>
 
@@ -381,7 +463,6 @@ function buildGapResults() {
   const covPct = r.coverage_pct;
   const confPct = r.skill_match_confidence;
 
-  // SVG ring
   const R = 54, cx = 70, cy = 70;
   const circ = 2 * Math.PI * R;
   const dash = (covPct / 100) * circ;
@@ -421,9 +502,9 @@ function buildGapResults() {
 
     <div class="coverage-ring">
       <svg width="140" height="140" viewBox="0 0 140 140">
-        <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="var(--border)" stroke-width="10"/>
+        <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="var(--line)" stroke-width="10"/>
         <circle data-fill cx="${cx}" cy="${cy}" r="${R}" fill="none"
-          stroke="${covPct >= 60 ? 'var(--teal)' : covPct >= 30 ? 'var(--gold)' : 'var(--rose)'}"
+          stroke="${covPct >= 60 ? 'var(--teal)' : covPct >= 30 ? 'var(--brass)' : 'var(--rose)'}"
           stroke-width="10"
           stroke-linecap="round"
           stroke-dasharray="0 ${circ}"
@@ -431,9 +512,9 @@ function buildGapResults() {
           transform="rotate(-90 ${cx} ${cy})"
         />
         <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle"
-              font-family="Playfair Display" font-size="18" fill="var(--text)">${covPct}%</text>
+              font-family="Newsreader" font-size="18" fill="var(--ink)">${covPct}%</text>
         <text x="${cx}" y="${cy + 22}" text-anchor="middle"
-              font-family="DM Sans" font-size="9" fill="var(--muted)" letter-spacing="1">COVERAGE</text>
+              font-family="IBM Plex Mono" font-size="9" fill="var(--muted)" letter-spacing="1">COVERAGE</text>
       </svg>
     </div>
 
@@ -467,14 +548,18 @@ function buildGapResults() {
 
 // ─── HELPERS ─────────────────────────────────────────
 function escHtml(s) {
-  return String(s)
+  return String(s ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 }
 
-function setLoading(v) { state.loading = v; render(); }
+function setLoading(v, key) {
+  state.loading = v;
+  if (key) state.loadingKey = key;
+  render();
+}
 
 async function apiCall(path, body) {
   const opts = body
@@ -486,13 +571,32 @@ async function apiCall(path, body) {
   return data;
 }
 
+function on(id, evt, handler) {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener(evt, handler);
+}
+
+function resetAssessment() {
+  state.step = 0;
+  state.answers = {};
+  state.obj1Result = null;
+  state.interestText = '';
+  state.obj2Result = null;
+  state.selectedCareer = null;
+  state.userSkills = '';
+  state.gapResult = null;
+  state.error = null;
+  currentCatIdx = 0;
+  lastBearing = STEP_BEARINGS[0];
+}
+
 // ─── EVENTS ──────────────────────────────────────────
 function attachEvents() {
   // Welcome
-  on('btn-start', async () => {
+  on('btn-start', 'click', async () => {
     state.error = null;
     if (!state.questions.length) {
-      setLoading(true);
+      setLoading(true, 'questions');
       try {
         const d = await apiCall('/api/questions');
         state.questions = d.questions;
@@ -509,14 +613,16 @@ function attachEvents() {
   });
 
   // RIASEC nav
-  on('btn-prev-cat', () => { currentCatIdx--; render(); });
-  on('btn-next-cat', () => { currentCatIdx++; render(); });
-  on('btn-submit-riasec', async () => {
+  on('btn-prev-cat', 'click', () => { currentCatIdx--; render(); });
+
+  on('btn-next-cat', 'click', () => { currentCatIdx++; render(); });
+
+  on('btn-submit-riasec', 'click', async () => {
     state.error = null;
-    setLoading(true);
+    setLoading(true, 'objective1');
     try {
-      const result = await apiCall('/api/objective1', { answers: state.answers });
-      state.obj1Result = result;
+      const d = await apiCall('/api/objective1', { answers: state.answers });
+      state.obj1Result = { careers: d.careers, profile: d.profile };
       state.step = 2;
     } catch (e) {
       state.error = e.message;
@@ -524,44 +630,41 @@ function attachEvents() {
     setLoading(false);
   });
 
-  // Likert radios
-  document.querySelectorAll('input[type=radio]').forEach(inp => {
-    inp.addEventListener('change', () => {
-      const cat = inp.dataset.cat;
-      const qi = parseInt(inp.dataset.qi);
-      const val = parseInt(inp.value);
+  // RIASEC likert inputs
+  document.querySelectorAll('.likert input[type="radio"]').forEach(input => {
+    input.addEventListener('change', (e) => {
+      const qi = parseInt(e.target.dataset.qi, 10);
+      const cat = e.target.dataset.cat;
+      const val = parseInt(e.target.value, 10);
       if (!state.answers[cat]) state.answers[cat] = [];
       state.answers[cat][qi] = val;
-
-      // re-render just buttons to update disabled state
-      const catQs = state.questions.filter(q => q.category === cat);
-      const catAnswers = state.answers[cat] || [];
-      const catDone = catAnswers.length === catQs.length && catAnswers.every(v => v > 0);
-      const isLast = currentCatIdx === CAT_ORDER.length - 1;
-      const btn = document.getElementById(isLast ? 'btn-submit-riasec' : 'btn-next-cat');
-      if (btn) btn.disabled = !catDone;
-
-      // update progress bar
-      const totalAnswered = Object.values(state.answers).reduce((a, b) => a + b.length, 0);
-      const fill = document.querySelector('.q-progress-fill');
-      if (fill) fill.style.width = Math.round(totalAnswered / 30 * 100) + '%';
+      render();
     });
   });
 
-  // Obj1 → Interests
-  on('btn-goto-interests', () => { state.step = 3; render(); });
-  on('btn-back-to-obj1', () => { state.step = 2; render(); });
+  // Objective 1 results
+  on('btn-goto-interests', 'click', () => { state.step = 3; render(); });
 
-  // Submit interests
-  on('btn-submit-interests', async () => {
-    const txt = document.getElementById('interest-text')?.value.trim() || '';
-    if (!txt) { state.error = 'Please describe your interests before continuing.'; render(); return; }
-    state.interestText = txt;
+  // Interests
+  on('interest-text', 'input', (e) => { state.interestText = e.target.value; });
+
+  on('btn-back-to-obj1', 'click', () => { state.step = 2; render(); });
+
+  on('btn-submit-interests', 'click', async () => {
     state.error = null;
-    setLoading(true);
+    if (!state.interestText || !state.interestText.trim()) {
+      state.error = 'Tell us a little about your interests before continuing.';
+      render();
+      return;
+    }
+    setLoading(true, 'objective2');
     try {
-      const result = await apiCall('/api/objective2', { user_text: txt });
-      state.obj2Result = result;
+      const d = await apiCall('/api/objective2', {
+        interest_text: state.interestText,
+        profile: state.obj1Result.profile,
+      });
+      state.obj2Result = { top10: d.top10, obj1_display: d.obj1_display };
+      state.selectedCareer = null;
       state.step = 4;
     } catch (e) {
       state.error = e.message;
@@ -569,38 +672,46 @@ function attachEvents() {
     setLoading(false);
   });
 
-  // Career cards
-  document.querySelectorAll('.career-card[data-title]').forEach(card => {
-    card.addEventListener('click', () => {
+  // Top 10 — select a career
+  document.querySelectorAll('.career-grid .career-card[data-title]').forEach(card => {
+    const select = () => {
       state.selectedCareer = card.dataset.title;
+      state.error = null;
       render();
+    };
+    card.addEventListener('click', select);
+    card.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(); }
     });
   });
 
-  // Top10 nav
-  on('btn-back-to-interests', () => { state.step = 3; render(); });
-  on('btn-goto-skillgap', () => {
+  on('btn-back-to-interests', 'click', () => { state.step = 3; render(); });
+
+  on('btn-goto-skillgap', 'click', () => {
     if (!state.selectedCareer) return;
-    state.error = null;
     state.step = 5;
     render();
   });
 
-  // Skill gap
-  on('btn-back-to-top10', () => { state.step = 4; render(); });
-  on('btn-back-to-top10-from-results', () => { state.step = 4; render(); });
+  // Skill gap input
+  on('skill-input', 'input', (e) => { state.userSkills = e.target.value; });
 
-  on('btn-submit-skills', async () => {
-    const skills = document.getElementById('skill-input')?.value.trim() || '';
-    state.userSkills = skills;
+  on('btn-back-to-top10', 'click', () => { state.step = 4; render(); });
+
+  on('btn-submit-skills', 'click', async () => {
     state.error = null;
-    setLoading(true);
+    if (!state.userSkills || !state.userSkills.trim()) {
+      state.error = 'Enter at least one skill so we can measure your coverage.';
+      render();
+      return;
+    }
+    setLoading(true, 'skillgap');
     try {
-      const result = await apiCall('/api/objective3', {
-        selected_title: state.selectedCareer,
-        user_skills: skills,
+      const d = await apiCall('/api/skill-gap', {
+        career: state.selectedCareer,
+        skills: state.userSkills,
       });
-      state.gapResult = result;
+      state.gapResult = d;
       state.step = 6;
     } catch (e) {
       state.error = e.message;
@@ -608,22 +719,17 @@ function attachEvents() {
     setLoading(false);
   });
 
-  // Restart
-  on('btn-restart', () => {
-    Object.assign(state, {
-      step: 0, answers: {}, obj1Result: null, interestText: '',
-      obj2Result: null, selectedCareer: null, userSkills: '', gapResult: null,
-      loading: false, error: null,
-    });
-    currentCatIdx = 0;
+  // Gap results
+  on('btn-restart', 'click', () => { resetAssessment(); render(); });
+
+  on('btn-back-to-top10-from-results', 'click', () => {
+    state.selectedCareer = null;
+    state.userSkills = '';
+    state.gapResult = null;
+    state.step = 4;
     render();
   });
 }
 
-function on(id, fn) {
-  const el = document.getElementById(id);
-  if (el) el.addEventListener('click', fn);
-}
-
-// ─── BOOT ────────────────────────────────────────────
+// ─── INIT ────────────────────────────────────────────
 render();
