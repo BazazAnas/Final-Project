@@ -1,25 +1,25 @@
 /* ════════════════════════════════════════════════════════
-   CareerCompass — vanilla JS SPA
-   No bundler required. Runs from Flask static folder.
+  CareerCompass — vanilla JS SPA
+  No bundler required. Runs from Flask static folder.
 
-   Redesign note: the visual language is a navigation
-   instrument — a compass dial reads off your progress as a
-   bearing, and each step is a heading on the way to your
-   result. All markup below is written to match styles.css.
+  Redesign note: the visual language is a navigation
+  instrument — a compass dial reads off your progress as a
+  bearing, and each step is a heading on the way to your
+  result. All markup below is written to match styles.css.
 
-   API contract assumed (adjust paths to match your Flask
-   routes if they differ):
-     GET  /api/questions                 -> { questions }
-     POST /api/objective1  { answers }   -> { careers, profile }
-     POST /api/objective2  { interest_text, profile }
+  API contract assumed (adjust paths to match your Flask
+  routes if they differ):
+    GET  /api/questions                 -> { questions }
+    POST /api/objective1  { answers }   -> { careers, profile }
+    POST /api/objective2  { interest_text, profile }
                                           -> { top10, obj1_display }
-     POST /api/skill-gap   { career, skills }
+    POST /api/skill-gap   { career, skills }
                                           -> { selected_career, matched_job,
-                                               total_required, have, gap,
-                                               coverage_pct, skill_match_confidence }
+                                              total_required, have, gap,
+                                              coverage_pct, skill_match_confidence }
 ════════════════════════════════════════════════════════ */
 
-const API = ''; // same origin — Flask serves both
+const API = '';
 
 const RIASEC_COLORS = {
   Realistic: '#b8622f',
@@ -32,7 +32,6 @@ const RIASEC_COLORS = {
 
 const CAT_ORDER = ['Realistic', 'Investigative', 'Artistic', 'Social', 'Enterprising', 'Conventional'];
 const STEPS = ['Welcome', 'RIASEC', 'Top 5', 'Interests', 'Top 10', 'Skill Gap', 'Results'];
-// each step reads as a compass bearing, evenly spaced around the dial
 const STEP_BEARINGS = STEPS.map((_, i) => Math.round((i / STEPS.length) * 360));
 
 const LOADING_MESSAGES = {
@@ -411,7 +410,7 @@ function buildTop10() {
     <div class="career-grid">
       ${top10.map((c, i) => `
         <div class="career-card ${state.selectedCareer === c.title ? 'selected' : ''}"
-             data-title="${escHtml(c.title)}" id="career-${i}" tabindex="0" role="button">
+            data-title="${escHtml(c.title)}" id="career-${i}" tabindex="0" role="button">
           <div class="career-rank">Rank #${i + 1}</div>
           <div class="career-title">${c.title}</div>
           <div class="career-desc">${c.description || 'No description available.'}</div>
