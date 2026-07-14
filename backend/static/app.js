@@ -1,24 +1,3 @@
-/* ════════════════════════════════════════════════════════
-  CareerCompass — vanilla JS SPA
-  No bundler required. Runs from Flask static folder.
-
-  Redesign note: the visual language is a navigation
-  instrument — a compass dial reads off your progress as a
-  bearing, and each step is a heading on the way to your
-  result. All markup below is written to match styles.css.
-
-  API contract assumed (adjust paths to match your Flask
-  routes if they differ):
-    GET  /api/questions                 -> { questions }
-    POST /api/objective1  { answers }   -> { careers, profile }
-    POST /api/objective2  { interest_text, profile }
-                                          -> { top10, obj1_display }
-    POST /api/skill-gap   { career, skills }
-                                          -> { selected_career, matched_job,
-                                              total_required, have, gap,
-                                              coverage_pct, skill_match_confidence }
-════════════════════════════════════════════════════════ */
-
 const API = '';
 
 const RIASEC_COLORS = {
@@ -732,3 +711,25 @@ function attachEvents() {
 
 // ─── INIT ────────────────────────────────────────────
 render();
+
+
+/* ════════════════════════════════════════════════════════
+  CareerCompass — vanilla JS SPA
+  No bundler required. Runs from Flask static folder.
+
+  Redesign note: the visual language is a navigation
+  instrument — a compass dial reads off your progress as a
+  bearing, and each step is a heading on the way to your
+  result. All markup below is written to match styles.css.
+
+  API contract assumed (adjust paths to match your Flask
+  routes if they differ):
+    GET  /api/questions                 -> { questions }
+    POST /api/objective1  { answers }   -> { careers, profile }
+    POST /api/objective2  { interest_text, profile }
+                                          -> { top10, obj1_display }
+    POST /api/skill-gap   { career, skills }
+                                          -> { selected_career, matched_job,
+                                              total_required, have, gap,
+                                              coverage_pct, skill_match_confidence }
+════════════════════════════════════════════════════════ */
