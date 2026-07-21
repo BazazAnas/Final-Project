@@ -1,17 +1,16 @@
 const API = '';
 
 const RIASEC_COLORS = {
-  Realistic: '#b8622f',
+  Realistic: '#bd6a35',
   Investigative: '#2f6fa8',
   Artistic: '#8b4b9e',
-  Social: '#2f8f72',
-  Enterprising: '#c1443b',
-  Conventional: '#6b6f5e',
+  Social: '#1f9d6c',
+  Enterprising: '#cf4a3d',
+  Conventional: '#5b6474',
 };
 
 const CAT_ORDER = ['Realistic', 'Investigative', 'Artistic', 'Social', 'Enterprising', 'Conventional'];
 const STEPS = ['Welcome', 'RIASEC', 'Top 5', 'Interests', 'Top 10', 'Skill Gap', 'Results'];
-const STEP_BEARINGS = STEPS.map((_, i) => Math.round((i / STEPS.length) * 360));
 
 const LOADING_MESSAGES = {
   questions: 'Loading the survey instrument…',
@@ -37,29 +36,12 @@ const state = {
 };
 
 let currentCatIdx = 0;
-let lastBearing = STEP_BEARINGS[0];
 
 // ─── RENDER ENGINE ───────────────────────────────────
 function render() {
   document.getElementById('app').innerHTML = buildApp();
   attachEvents();
-  animateCompassNeedle();
   if (state.step === 6 && !state.loading) animateGapResults();
-}
-
-function animateCompassNeedle() {
-  const needle = document.getElementById('compass-needle');
-  if (!needle) return;
-  const target = STEP_BEARINGS[Math.min(state.step, STEP_BEARINGS.length - 1)];
-  needle.style.transition = 'none';
-  needle.setAttribute('transform', `rotate(${lastBearing} 60 60)`);
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      needle.style.transition = 'transform 1.1s cubic-bezier(0.22,1,0.36,1)';
-      needle.setAttribute('transform', `rotate(${target} 60 60)`);
-      lastBearing = target;
-    });
-  });
 }
 
 function animateGapResults() {
@@ -112,52 +94,15 @@ function buildHeader() {
   `;
 }
 
-// ─── COMPASS DIAL (signature element) ───────────────
-function buildCompassDial() {
-  const ticks = [];
-  for (let deg = 0; deg < 360; deg += 30) {
-    const major = deg % 90 === 0;
-    const r1 = major ? 42 : 46;
-    const r2 = 50;
-    const rad = (deg - 90) * (Math.PI / 180);
-    const x1 = 60 + r1 * Math.cos(rad), y1 = 60 + r1 * Math.sin(rad);
-    const x2 = 60 + r2 * Math.cos(rad), y2 = 60 + r2 * Math.sin(rad);
-    ticks.push(`<line class="compass-tick ${major ? 'major' : ''}" x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" />`);
-  }
-  const cardinals = [
-    { l: 'N', deg: 0 }, { l: 'E', deg: 90 }, { l: 'S', deg: 180 }, { l: 'W', deg: 270 },
-  ];
-  const labels = cardinals.map(({ l, deg }) => {
-    const rad = (deg - 90) * (Math.PI / 180);
-    const x = 60 + 33 * Math.cos(rad), y = 60 + 33 * Math.sin(rad);
-    return `<text class="compass-label" x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle">${l}</text>`;
-  }).join('');
-
-  return `
-    <div class="compass-dial-wrap">
-      <svg class="compass-dial" width="120" height="120" viewBox="0 0 120 120">
-        <circle class="compass-rim" cx="60" cy="60" r="54" />
-        ${ticks.join('')}
-        ${labels}
-        <g id="compass-needle">
-          <path class="compass-needle-tip" d="M60,16 L66,60 L54,60 Z" />
-          <path class="compass-needle-tail" d="M60,104 L66,60 L54,60 Z" />
-        </g>
-        <circle class="compass-hub" cx="60" cy="60" r="4.5" />
-      </svg>
-    </div>
-  `;
-}
-
+// ─── PATH RAIL (signature element) ───────────────────
 function buildStepRail() {
-  let html = `<nav class="step-rail" aria-label="Assessment progress">${buildCompassDial()}<ol class="step-list">`;
+  let html = `<nav class="step-rail" aria-label="Assessment progress"><div class="rail-title">Your Path</div><ol class="step-list">`;
   STEPS.forEach((label, s) => {
     const cls = state.step > s ? 'done' : state.step === s ? 'active' : '';
-    const bearing = String(STEP_BEARINGS[s]).padStart(3, '0') + '°';
+    const idx = String(s + 1).padStart(2, '0');
     html += `
       <li class="step-node ${cls}">
-        <span class="step-bearing">${bearing}</span>
-        <span class="step-mark"></span>
+        <span class="step-index">${idx}</span>
         <span class="step-label">${label}</span>
       </li>
     `;
@@ -200,17 +145,17 @@ function buildWelcome() {
     </div>
     <div class="welcome-grid">
       <div class="welcome-card">
-        <div class="welcome-card-num">Bearing 01</div>
+        <div class="welcome-card-num">Layer 01</div>
         <div class="welcome-card-title">RIASEC Profile</div>
         <div class="welcome-card-desc">30 questions across 6 personality dimensions map you to O*NET occupations via cosine similarity.</div>
       </div>
       <div class="welcome-card">
-        <div class="welcome-card-num">Bearing 02</div>
+        <div class="welcome-card-num">Layer 02</div>
         <div class="welcome-card-title">Interest Matching</div>
         <div class="welcome-card-desc">TF-IDF NLP analysis of your interests fused with RIASEC scores produces a hybrid top-10 ranking.</div>
       </div>
       <div class="welcome-card">
-        <div class="welcome-card-num">Bearing 03</div>
+        <div class="welcome-card-num">Layer 03</div>
         <div class="welcome-card-title">Skill Gap Analysis</div>
         <div class="welcome-card-desc">Compare your current skills against the role requirements and get a clear development roadmap.</div>
       </div>
@@ -236,7 +181,7 @@ function buildRIASEC() {
   let html = `
     <div class="section-eyebrow">Step 1 of 3 — Personality Assessment</div>
     <div class="section-title">RIASEC Career Interest Survey</div>
-    <div class="section-subtitle">Rate each statement 1 (Strongly Disagree) to 5 (Strongly Agree). Be honest — there are no right answers.</div>
+    <div class="section-subtitle">Rate each statement 1 (Strongly Disagree) to 5 (Strongly Agree).</div>
     <div class="q-progress"><div class="q-progress-fill" style="width:${pct}%"></div></div>
     <div class="riasec-category">
       <div class="cat-header">
@@ -451,7 +396,7 @@ function buildGapResults() {
     <div class="section-title" style="margin-bottom:0.5rem">Skills Required</div>
 
     <div class="matched-job-note">
-      🔍 Your selected career "<strong>${r.selected_career}</strong>" was matched to
+      Your selected career "<strong>${r.selected_career}</strong>" was matched to
       "<strong>${r.matched_job}</strong>" in the skills database.
     </div>
 
@@ -499,7 +444,6 @@ function buildGapResults() {
     <div class="skill-columns">
       <div>
         <div class="skill-col-header">
-          <span class="skill-col-icon">✅</span>
           <span class="skill-col-title have">Skills You Have (${r.have.length})</span>
         </div>
         <div>
@@ -508,17 +452,16 @@ function buildGapResults() {
       </div>
       <div>
         <div class="skill-col-header">
-          <span class="skill-col-icon">🚀</span>
           <span class="skill-col-title gap">Skills to Develop (${r.gap.length})</span>
         </div>
         <div>
-          ${r.gap.length ? r.gap.map(s => `<span class="skill-tag gap">+ ${s}</span>`).join('') : '<span style="color:var(--teal);font-size:0.82rem">You have all required skills! 🎉</span>'}
+          ${r.gap.length ? r.gap.map(s => `<span class="skill-tag gap">+ ${s}</span>`).join('') : '<span style="color:var(--teal);font-size:0.82rem">You have all the required skills.</span>'}
         </div>
       </div>
     </div>
 
     <div class="btn-row">
-      <button class="btn btn-secondary" id="btn-restart">↺ Start Over</button>
+      <button class="btn btn-secondary" id="btn-restart">Start Over</button>
       <button class="btn btn-primary" id="btn-back-to-top10-from-results">Try Another Career</button>
     </div>
   `;
@@ -565,7 +508,6 @@ function resetAssessment() {
   state.gapResult = null;
   state.error = null;
   currentCatIdx = 0;
-  lastBearing = STEP_BEARINGS[0];
 }
 
 // ─── EVENTS ──────────────────────────────────────────
@@ -711,25 +653,3 @@ function attachEvents() {
 
 // ─── INIT ────────────────────────────────────────────
 render();
-
-
-/* ════════════════════════════════════════════════════════
-  CareerCompass — vanilla JS SPA
-  No bundler required. Runs from Flask static folder.
-
-  Redesign note: the visual language is a navigation
-  instrument — a compass dial reads off your progress as a
-  bearing, and each step is a heading on the way to your
-  result. All markup below is written to match styles.css.
-
-  API contract assumed (adjust paths to match your Flask
-  routes if they differ):
-    GET  /api/questions                 -> { questions }
-    POST /api/objective1  { answers }   -> { careers, profile }
-    POST /api/objective2  { interest_text, profile }
-                                          -> { top10, obj1_display }
-    POST /api/skill-gap   { career, skills }
-                                          -> { selected_career, matched_job,
-                                              total_required, have, gap,
-                                              coverage_pct, skill_match_confidence }
-════════════════════════════════════════════════════════ */
