@@ -277,7 +277,6 @@ a { color: var(--brass); }
   padding: 2.75rem 3rem;
   box-shadow: var(--shadow-panel);
   border-top: 3px solid var(--brass);
-  animation: panel-in 0.5s var(--ease) both;
   position: relative;
 }
 
@@ -430,8 +429,6 @@ a { color: var(--brass); }
   background: linear-gradient(90deg, var(--brass-dark), var(--brass));
   transition: width 0.5s var(--ease);
 }
-
-.riasec-category { animation: fade-up 0.4s var(--ease) both; }
 
 .cat-header {
   display: flex;
