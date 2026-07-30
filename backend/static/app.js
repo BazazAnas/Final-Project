@@ -181,7 +181,7 @@ function buildRIASEC() {
   let html = `
     <div class="section-eyebrow">Step 1 of 3 — Personality Assessment</div>
     <div class="section-title">RIASEC Career Interest Survey</div>
-    <div class="section-subtitle">Rate each statement 1 (Strongly Disagree) to 5 (Strongly Agree).</div>
+    <div class="section-subtitle">Rate each statement 1 (Strongly Disagree) to 5 (Strongly Agree). Be honest — there are no right answers.</div>
     <div class="q-progress"><div class="q-progress-fill" style="width:${pct}%"></div></div>
     <div class="riasec-category">
       <div class="cat-header">
@@ -580,8 +580,7 @@ function attachEvents() {
     setLoading(true, 'objective2');
     try {
       const d = await apiCall('/api/objective2', {
-        interest_text: state.interestText,
-        profile: state.obj1Result.profile,
+        user_text: state.interestText,
       });
       state.obj2Result = { top10: d.top10, obj1_display: d.obj1_display };
       state.selectedCareer = null;
@@ -627,9 +626,9 @@ function attachEvents() {
     }
     setLoading(true, 'skillgap');
     try {
-      const d = await apiCall('/api/skill-gap', {
-        career: state.selectedCareer,
-        skills: state.userSkills,
+      const d = await apiCall('/api/objective3', {
+        selected_title: state.selectedCareer,
+        user_skills: state.userSkills,
       });
       state.gapResult = d;
       state.step = 6;
@@ -653,3 +652,24 @@ function attachEvents() {
 
 // ─── INIT ────────────────────────────────────────────
 render();
+
+
+/* ════════════════════════════════════════════════════════
+  CareerCompass — vanilla JS SPA
+  No bundler required. Runs from Flask static folder.
+
+  Redesign note: the visual language is a clear, well-lit
+  workspace. Progress is tracked with a simple path rail —
+  numbered stops on a line — instead of a compass instrument.
+  All markup below is written to match style.css.
+
+  API contract (matches app.py):
+    GET  /api/questions                 -> { questions }
+    POST /api/objective1  { answers }   -> { careers, profile }
+    POST /api/objective2  { user_text }
+                                          -> { top10, obj1_display }
+    POST /api/objective3  { selected_title, user_skills }
+                                          -> { selected_career, matched_job,
+                                              total_required, have, gap,
+                                              coverage_pct, skill_match_confidence }
+════════════════════════════════════════════════════════ */
