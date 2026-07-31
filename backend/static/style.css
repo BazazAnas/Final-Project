@@ -200,7 +200,6 @@ a { color: var(--brass); }
   .step-node::after { top: 50%; left: 100%; width: 1.6rem; height: 2px; transform: translateY(-50%); }
 }
 
-/* step list */
 .step-list { list-style: none; margin: 0; padding: 0; }
 
 .step-node {
@@ -213,7 +212,6 @@ a { color: var(--brass); }
 .step-node.active,
 .step-node.done { opacity: 1; }
 
-/* the dot */
 .step-node::before {
   content: '';
   position: absolute;
@@ -237,7 +235,6 @@ a { color: var(--brass); }
   50% { box-shadow: 0 0 0 6px rgba(54,82,214,0.1); }
 }
 
-/* the connecting line */
 .step-node::after {
   content: '';
   position: absolute;
